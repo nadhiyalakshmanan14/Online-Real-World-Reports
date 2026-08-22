@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cohort Report — Smoking &amp; Organ Health</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root{
+    --bg:#E3ECF4; --surface:#FBFDFE; --ink:#10222C; --ink-soft:#4C6478;
+    --accent:#2166AC; --accent-soft:#8FB6DA; --warn:#C2472B; --warn-soft:#E7A48F;
+    --line:#C6D6E3; --shadow: 0 1px 2px rgba(16,34,44,.06), 0 12px 32px -16px rgba(16,34,44,.28);
+    --radius:14px;
+  }
+  html[data-theme="vital"]{
+    --bg:#0A1A15; --surface:#11241D; --ink:#E7F3EC; --ink-soft:#8FB19E;
+    --accent:#3FB27F; --accent-soft:#1F5A3F; --warn:#E2725B; --warn-soft:#7A3327;
+    --line:#1E362C; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -16px rgba(0,0,0,.6);
+  }
+  html[data-theme="mono"]{
+    --bg:#FFFFFF; --surface:#FFFFFF; --ink:#0A0A0A; --ink-soft:#5A5A5A;
+    --accent:#0A0A0A; --accent-soft:#B8B8B8; --warn:#0A0A0A; --warn-soft:#D6D6D6;
+    --line:#0A0A0A; --shadow:none;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    transition:background .35s ease, color .35s ease;
+    padding-bottom:80px;
+  }
+  ::selection{ background:var(--accent); color:var(--surface); }
+
+  h1,h2,h3{ font-family:'Fraunces', serif; font-weight:600; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-soft);
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    background:var(--bg); border-bottom:1px solid var(--line);
+    backdrop-filter:blur(6px);
+  }
+  .topbar-inner{
+    max-width:1180px; margin:0 auto; padding:18px 28px;
+    display:flex; align-items:center; justify-content:space-between; gap:24px;
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand-mark{
+    width:10px; height:10px; border-radius:2px; background:var(--accent);
+    display:inline-block; transform:translateY(-1px);
+  }
+  html[data-theme="mono"] .brand-mark{ border-radius:0; }
+  .brand-name{ font-family:'Fraunces', serif; font-weight:600; font-size:17px; }
+  .brand-sub{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); }
+
+  .tabs{
+    display:flex; gap:2px; position:relative;
+    border:1px solid var(--line); border-radius:100px; padding:4px; background:var(--bg);
+  }
+  .tabs .tab-indicator{
+    position:absolute; top:4px; bottom:4px; left:4px;
+    border-radius:100px; background:var(--surface); box-shadow:var(--shadow);
+    transition:transform .32s cubic-bezier(.65,0,.35,1), width .32s cubic-bezier(.65,0,.35,1);
+    z-index:0;
+  }
+  html[data-theme="mono"] .tabs .tab-indicator{ background:var(--ink); }
+  .tab{
+    position:relative; z-index:1;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-soft); background:transparent; border:none;
+    padding:9px 16px; border-radius:100px; cursor:pointer; transition:color .25s ease; white-space:nowrap;
+  }
+  .tab:hover{ color:var(--ink); }
+  .tab.active{ color:var(--ink); }
+  html[data-theme="mono"] .tab.active{ color:var(--surface); }
+  .tab .tab-num{ opacity:.55; margin-right:5px; }
+
+  .theme-switch{
+    display:flex; gap:2px; align-items:center; position:relative;
+    border:1px solid var(--line); border-radius:100px; padding:4px; background:var(--bg);
+  }
+  .theme-switch .theme-indicator{
+    position:absolute; top:4px; bottom:4px; left:4px;
+    border-radius:100px; background:var(--surface); box-shadow:var(--shadow);
+    transition:transform .32s cubic-bezier(.65,0,.35,1);
+    z-index:0;
+  }
+  .theme-opt{
+    position:relative; z-index:1; display:flex; align-items:center; gap:7px;
+    padding:7px 13px 7px 9px; border-radius:100px; cursor:pointer; border:none; background:transparent;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.03em; color:var(--ink-soft);
+    transition:color .25s ease; white-space:nowrap;
+  }
+  .theme-opt:hover{ color:var(--ink); }
+  .theme-opt.active{ color:var(--ink); }
+  .theme-opt .swatch{
+    width:14px; height:14px; border-radius:50%; flex:none; border:1px solid rgba(0,0,0,.08);
+    box-shadow:inset 0 0 0 2px var(--surface);
+  }
+  .theme-opt[data-t="clinical"] .swatch{ background:#2166AC; }
+  .theme-opt[data-t="vital"] .swatch{ background:#3FB27F; }
+  .theme-opt[data-t="mono"] .swatch{ background:linear-gradient(135deg,#0A0A0A 50%,#fff 50%); }
+
+  @media(max-width:860px){
+    .topbar-inner{ flex-direction:column; align-items:stretch; gap:12px; padding:14px 18px; }
+    .tabs{ overflow-x:auto; }
+    .theme-opt span:not(.swatch){ display:none; }
+  }
+
+  /* ---------- LAYOUT ---------- */
+  .page{ display:none; max-width:1180px; margin:0 auto; padding:0 28px; }
+  .page.active{ display:block; animation:fade .5s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .sheet{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:40px; margin-top:28px;
+  }
+  html[data-theme="mono"] .sheet{ border-radius:0; }
+
+  .section-index{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .section-index .num{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--accent); }
+  .section-index .rule{ flex:1; height:1px; background:var(--line); }
+
+  /* ---------- HERO ---------- */
+  .hero{ padding:56px 0 8px; }
+  .hero h1{ font-size:clamp(30px,4.4vw,46px); line-height:1.08; max-width:820px; }
+  .hero .lede{ margin-top:18px; max-width:640px; color:var(--ink-soft); font-size:15.5px; line-height:1.65; }
+  .hero .lede b{ color:var(--ink); font-weight:600; }
+
+  /* ---------- KPI GRID ---------- */
+  .kpi-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:34px; }
+  @media(max-width:860px){ .kpi-grid{ grid-template-columns:repeat(2,1fr);} }
+  .kpi{
+    border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+    background:var(--bg); position:relative; overflow:hidden;
+  }
+  html[data-theme="mono"] .kpi{ border-radius:0; }
+  .kpi .kpi-label{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); }
+  .kpi .kpi-value{ font-family:'Fraunces', serif; font-size:32px; font-weight:600; margin-top:8px; }
+  .kpi .kpi-note{ font-size:12px; color:var(--ink-soft); margin-top:6px; }
+
+  /* ---------- RISK EQUALIZER (signature) ---------- */
+  .equalizer{ margin-top:44px; }
+  .eq-head{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; gap:10px;}
+  .eq-title{ font-size:19px; }
+  .eq-baseline-tag{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--accent);
+    border:1px solid var(--accent-soft); padding:5px 10px; border-radius:100px;
+  }
+  .eq-row{ display:grid; grid-template-columns:170px 1fr 54px; align-items:center; gap:14px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .eq-row:last-child{ border-bottom:none; }
+  .eq-name{ font-size:13px; color:var(--ink-soft); }
+  .eq-track{ position:relative; height:26px; background:var(--bg); border:1px solid var(--line); border-radius:100px; }
+  .eq-baseline{ position:absolute; top:-6px; bottom:-6px; width:1px; background:var(--accent); opacity:.55; }
+  .eq-dot{
+    position:absolute; top:50%; width:14px; height:14px; border-radius:50%;
+    background:var(--accent); transform:translate(-50%,-50%); border:2px solid var(--surface);
+    box-shadow:0 0 0 1px var(--line);
+  }
+  .eq-val{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; }
+
+  /* ---------- COMPOSITION ROW ---------- */
+  .comp-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:40px; }
+  @media(max-width:860px){ .comp-grid{ grid-template-columns:1fr; } }
+  .comp-card{ border:1px solid var(--line); border-radius:12px; padding:20px; }
+  html[data-theme="mono"] .comp-card{ border-radius:0; }
+  .comp-card h3{ font-size:14px; font-family:'IBM Plex Sans',sans-serif; font-weight:600; margin-bottom:14px; }
+  .chart-wrap{ position:relative; height:190px; }
+  .chart-wrap.tall{ height:260px; }
+  .chart-wrap.wide{ height:300px; }
+
+  /* ---------- NARRATIVE CALLOUT ---------- */
+  .callout{
+    border-left:3px solid var(--accent); padding:14px 20px; margin:28px 0;
+    background:var(--bg); border-radius:0 10px 10px 0; font-size:14px; color:var(--ink-soft); line-height:1.6;
+  }
+  html[data-theme="mono"] .callout{ border-radius:0; }
+  .callout b{ color:var(--ink); }
+
+  .chart-block{ margin-top:38px; }
+  .chart-block h3{ font-size:17px; margin-bottom:4px; }
+  .chart-block .sub{ font-size:12.5px; color:var(--ink-soft); margin-bottom:18px; }
+
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media(max-width:860px){ .two-col{ grid-template-columns:1fr; } }
+
+  /* footer nav */
+  .page-nav{ display:flex; justify-content:space-between; margin-top:44px; padding-top:20px; border-top:1px solid var(--line); }
+  .page-nav a{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--ink-soft); text-decoration:none;
+    cursor:pointer; display:flex; align-items:center; gap:6px;
+  }
+  .page-nav a:hover{ color:var(--accent); }
+
+  footer.credit{ text-align:center; margin-top:36px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span class="brand-name">Cohort Report</span>
+      <span class="brand-sub">/ Smoking &amp; Organ Health · n=2,500</span>
+    </div>
+    <div class="tabs" id="tabs">
+      <div class="tab-indicator" id="tabIndicator"></div>
+      <button class="tab active" data-page="overview"><span class="tab-num">01</span>Overview</button>
+      <button class="tab" data-page="risk"><span class="tab-num">02</span>Risk Factors</button>
+      <button class="tab" data-page="organ"><span class="tab-num">03</span>Organ Panel</button>
+    </div>
+    <div class="theme-switch" id="themeSwitch">
+      <div class="theme-indicator" id="themeIndicator"></div>
+      <button class="theme-opt active" data-t="clinical"><span class="swatch"></span><span>Clinical</span></button>
+      <button class="theme-opt" data-t="vital"><span class="swatch"></span><span>Vital</span></button>
+      <button class="theme-opt" data-t="mono"><span class="swatch"></span><span>Mono</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PAGE 1 — OVERVIEW ================= -->
+<div class="page active" id="page-overview">
+  <div class="hero">
+    <span class="eyebrow">Report 01 / 03 — Cohort Overview</span>
+    <h1>Damage rates barely move — no matter which risk factor you slice by.</h1>
+    <p class="lede">Across <b>2,500 patients</b> screened for organ condition, the share showing damage holds within a narrow <b>31%–43%</b> band whether you group by smoking status, blood pressure, alcohol use, or family history. The baseline sits at <b>35.9%</b> — and every segment tested lands close to it.</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Cohort Size</div>
+      <div class="kpi-value mono">2,500</div>
+      <div class="kpi-note">patients screened</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Overall Damage Rate</div>
+      <div class="kpi-value mono">35.9%</div>
+      <div class="kpi-note">897 of 2,500 organs</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Current Smokers</div>
+      <div class="kpi-value mono">29.3%</div>
+      <div class="kpi-note">733 patients · 16.8 cig/day avg</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg. Age / BMI</div>
+      <div class="kpi-value mono">54.0 <span style="font-size:16px;color:var(--ink-soft)">/ 29.6</span></div>
+      <div class="kpi-note">cholesterol avg 207.8 mg/dL</div>
+    </div>
+  </div>
+
+  <div class="equalizer">
+    <div class="eq-head">
+      <div class="eq-title">The Risk Equalizer — damage rate by segment, vs. cohort baseline</div>
+      <div class="eq-baseline-tag">baseline · 35.9%</div>
+    </div>
+    <div id="equalizerRows"></div>
+  </div>
+
+  <div class="callout">
+    <b>Reading this chart:</b> if smoking, blood pressure, or drinking habits were strong drivers of organ damage in this cohort, their dots would cluster far from the baseline line. Instead every dot sits within ~5 points of it — the tightest spread is family history (35.6% vs 36.7%), the widest is BP risk (31.8% vs 37.2%). See <b>Report 02</b> for the full breakdown.
+  </div>
+
+  <div class="comp-grid">
+    <div class="comp-card">
+      <h3>Smoking status</h3>
+      <div class="chart-wrap"><canvas id="chSmoking"></canvas></div>
+    </div>
+    <div class="comp-card">
+      <h3>Organ screened</h3>
+      <div class="chart-wrap"><canvas id="chOrgan"></canvas></div>
+    </div>
+    <div class="comp-card">
+      <h3>Gender split</h3>
+      <div class="chart-wrap"><canvas id="chGender"></canvas></div>
+    </div>
+  </div>
+
+  <div class="page-nav">
+    <span></span>
+    <a data-goto="risk">Next — Risk Factors →</a>
+  </div>
+</div>
+
+<!-- ================= PAGE 2 — RISK FACTORS ================= -->
+<div class="page" id="page-risk">
+  <div class="hero" style="padding-top:48px;">
+    <span class="eyebrow">Report 02 / 03 — Risk Factor Breakdown</span>
+    <h1 style="font-size:clamp(26px,3.6vw,36px);">Every factor, tested one at a time.</h1>
+    <p class="lede">Six segment cuts against organ damage rate. Each chart shares the same y-axis (0–50%) so magnitude is directly comparable — the flatness is the finding.</p>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-block">
+      <h3>By smoking status</h3>
+      <div class="sub">Never (n=1,136) · Current (n=733) · Former (n=631)</div>
+      <div class="chart-wrap"><canvas id="chDmgSmoking"></canvas></div>
+    </div>
+    <div class="chart-block">
+      <h3>By blood pressure risk</h3>
+      <div class="sub">Normal (n=1,396) · High (n=629) · Low (n=475)</div>
+      <div class="chart-wrap"><canvas id="chDmgBP"></canvas></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-block">
+      <h3>By alcohol consumption</h3>
+      <div class="sub">Low (n=1,233) · Moderate (n=911) · High (n=356)</div>
+      <div class="chart-wrap"><canvas id="chDmgAlcohol"></canvas></div>
+    </div>
+    <div class="chart-block">
+      <h3>By family history of risk</h3>
+      <div class="sub">No (n=1,758) · Yes (n=742)</div>
+      <div class="chart-wrap"><canvas id="chDmgFamily"></canvas></div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>Smoking behaviour, isolated:</b> current smokers average <b>16.8 cigarettes/day</b> across <b>22.2 years</b>; former smokers averaged <b>7.6/day</b> across <b>9.7 years</b> before quitting. Despite that real exposure gap, current smokers show a marginally <i>lower</i> damage rate (34.9%) than never-smokers (37.1%) in this cohort.
+  </div>
+
+  <div class="two-col">
+    <div class="chart-block">
+      <h3>By age group</h3>
+      <div class="sub">18–30 through 71–89</div>
+      <div class="chart-wrap"><canvas id="chDmgAge"></canvas></div>
+    </div>
+    <div class="chart-block">
+      <h3>By BMI category</h3>
+      <div class="sub">Underweight (n=148) → Obese II+ (n=721)</div>
+      <div class="chart-wrap"><canvas id="chDmgBMI"></canvas></div>
+    </div>
+  </div>
+
+  <div class="page-nav">
+    <a data-goto="overview">← Back — Overview</a>
+    <a data-goto="organ">Next — Organ Panel →</a>
+  </div>
+</div>
+
+<!-- ================= PAGE 3 — ORGAN PANEL ================= -->
+<div class="page" id="page-organ">
+  <div class="hero" style="padding-top:48px;">
+    <span class="eyebrow">Report 03 / 03 — Organ Panel</span>
+    <h1 style="font-size:clamp(26px,3.6vw,36px);">Where damage concentrates, organ by organ.</h1>
+    <p class="lede">Liver shows the highest overall damage rate (37.7%) and the widest swing by smoking status — current smokers with liver screens show 42.2% damage vs. 35.8% for never/former.</p>
+  </div>
+
+  <div class="chart-block">
+    <h3>Damage rate by organ</h3>
+    <div class="sub">All five screened organs, sorted highest to lowest</div>
+    <div class="chart-wrap"><canvas id="chOrganDmg"></canvas></div>
+  </div>
+
+  <div class="chart-block">
+    <h3>Organ × smoking status matrix</h3>
+    <div class="sub">Damage rate (%) — darker cell = higher damage</div>
+    <div id="matrixWrap"></div>
+  </div>
+
+  <div class="callout">
+    <b>Standout cell:</b> Liver damage among <b>current smokers</b> sits at <b>42.2%</b> — the single highest value in the entire matrix, and the closest thing to a real signal in this dataset. Lungs, by contrast, show their highest damage rate among <b>never-smokers</b> (39.6%), running counter to expectation.
+  </div>
+
+  <div class="chart-block">
+    <h3>Healthy vs. damaged — clinical markers</h3>
+    <div class="sub">Average BMI, cholesterol (÷6 for scale) and age by condition outcome</div>
+    <div class="chart-wrap wide"><canvas id="chMarkers"></canvas></div>
+  </div>
+
+  <div class="callout">
+    <b>The takeaway:</b> the clinical markers most associated with damage in conventional screening — BMI, cholesterol, age — are essentially identical between the healthy and damaged groups here (cholesterol 207 vs. 209, BMI 29.8 vs. 29.4, age 54.1 vs. 53.9). In this cohort, organ condition doesn't trace cleanly back to any single measured variable.
+  </div>
+
+  <div class="page-nav">
+    <a data-goto="risk">← Back — Risk Factors</a>
+    <span></span>
+  </div>
+</div>
+
+<footer class="credit">Cohort Report · Smoking &amp; Organ Health Dataset · n=2,500 · Generated for internal review</footer>
+
+<script>
+/* ============ DATA ============ */
+const DATA = {
+  baseline: 35.9,
+  smoking_counts: {Never:1136, Current:733, Former:631},
+  organ_counts: {Liver:549, Heart:529, Lungs:478, "Human Body":474, Kidney:470},
+  gender_counts: {Male:1262, Female:1238},
+
+  dmg_smoking: {Never:37.1, Current:34.9, Former:34.9},
+  dmg_bp: {Normal:37.2, High:36.1, Low:31.8},
+  dmg_alcohol: {Low:35.8, Moderate:35.7, High:36.8},
+  dmg_family: {No:35.6, Yes:36.7},
+  dmg_gender: {Female:36.5, Male:35.3},
+  dmg_age: {"18-30":39.7,"31-40":32.6,"41-50":33.4,"51-60":35.2,"61-70":37.6,"71-89":35.9},
+  dmg_bmi: {"Underweight":43.2,"Normal":37.0,"Overweight":32.7,"Obese I":38.7,"Obese II+":33.8},
+  dmg_organ: {Liver:37.7, Kidney:37.0, Heart:36.5, Lungs:35.1, "Human Body":32.7},
+
+  matrix: {
+    Liver:      {Current:42.2, Former:35.8, Never:35.8},
+    Kidney:     {Current:34.3, Former:35.8, Never:39.1},
+    Heart:      {Current:36.2, Former:36.2, Never:36.9},
+    Lungs:      {Current:32.4, Former:31.1, Never:39.6},
+    "Human Body":{Current:27.9, Former:35.5, Never:34.2}
+  },
+
+  markers: {
+    Healthy: {bmi:29.76, chol:207.13/6, age:54.11},
+    Damaged: {bmi:29.36, chol:208.95/6, age:53.90}
+  }
+};
+
+/* ============ THEME ============ */
+const themeColors = {
+  clinical: { ink:'#10222C', soft:'#54697A', accent:'#2166AC', line:'#DBE3E7', surface:'#FFFFFF', warn:'#C2472B', palette:['#2166AC','#5A93C8','#96B9DC','#C7D9EA'] },
+  vital:    { ink:'#E7F3EC', soft:'#8FB19E', accent:'#3FB27F', line:'#1E362C', surface:'#11241D', warn:'#E2725B', palette:['#3FB27F','#6FC79A','#9FDAB8','#CFEDDB'] },
+  mono:     { ink:'#0A0A0A', soft:'#5A5A5A', accent:'#0A0A0A', line:'#0A0A0A', surface:'#FFFFFF', warn:'#0A0A0A', palette:['#0A0A0A','#4A4A4A','#8A8A8A','#C6C6C6'] }
+};
+let currentTheme = 'clinical';
+let charts = {};
+
+function css(){ return themeColors[currentTheme]; }
+
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.datalabels.display = false; /* opt in per-chart below */
+
+function baseOptions(extra={}){
+  const c = css();
+  return Object.assign({
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{
+      backgroundColor:c.surface, titleColor:c.ink, bodyColor:c.ink,
+      borderColor:c.line, borderWidth:1, padding:10, cornerRadius:6,
+      titleFont:{family:"'IBM Plex Mono', monospace", size:11},
+      bodyFont:{family:"'IBM Plex Mono', monospace", size:11}
+    }},
+    scales:{
+      x:{ grid:{color:c.line, display:false}, ticks:{color:c.soft} },
+      y:{ grid:{color:c.line}, ticks:{color:c.soft}, beginAtZero:true }
+    }
+  }, extra);
+}
+
+function mkBar(id, labels, values, opts={}){
+  const ctx = document.getElementById(id).getContext('2d');
+  const c = css();
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, {
+    type: 'bar',
+    data:{ labels, datasets:[{
+      data: values,
+      backgroundColor: opts.colors || c.accent,
+      borderRadius: currentTheme==='mono' ? 0 : 5,
+      barThickness: opts.thin ? 22 : undefined,
+      maxBarThickness: 46
+    }]},
+    options: baseOptions({
+      layout:{ padding: opts.horizontal ? {right:36} : {top:26} },
+      indexAxis: opts.horizontal ? 'y' : 'x',
+      plugins:{ legend:{display:false}, tooltip: baseOptions().plugins.tooltip,
+        datalabels:{
+          display:true,
+          color: c.ink,
+          anchor:'end',
+          align: opts.horizontal ? 'right' : 'top',
+          offset: 4,
+          font:{ family:"'IBM Plex Mono', monospace", size:11.5, weight:'600' },
+          formatter: v => v.toFixed(1)+'%'
+        }
+      },
+      scales: opts.horizontal ? {
+        x:{ grid:{color:c.line}, ticks:{color:c.soft, callback:v=>v+'%'}, max: opts.max||50, beginAtZero:true },
+        y:{ grid:{display:false}, ticks:{color:c.ink} }
+      } : {
+        x:{ grid:{display:false}, ticks:{color:c.ink} },
+        y:{ grid:{color:c.line}, ticks:{color:c.soft, callback:v=>v+'%'}, max: opts.max||50, beginAtZero:true }
+      }
+    })
+  });
+}
+
+function mkDoughnut(id, labels, values){
+  const ctx = document.getElementById(id).getContext('2d');
+  const c = css();
+  const total = values.reduce((a,b)=>a+b,0);
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data: values, backgroundColor: c.palette, borderColor: c.surface, borderWidth:2 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      layout:{ padding:10 },
+      plugins:{
+        legend:{ position:'bottom', labels:{ color:c.soft, boxWidth:9, boxHeight:9, padding:12, font:{family:"'IBM Plex Mono', monospace", size:10.5} } },
+        tooltip: baseOptions().plugins.tooltip,
+        datalabels:{
+          display:true,
+          color: currentTheme==='mono' ? c.surface : '#FFFFFF',
+          font:{ family:"'IBM Plex Mono', monospace", size:11, weight:'600' },
+          formatter: v => Math.round(v/total*100)+'%'
+        }
+      }
+    }
+  });
+}
+
+function mkGroupedBar(id, labels, datasets){
+  const ctx = document.getElementById(id).getContext('2d');
+  const c = css();
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets: datasets.map((d,i)=>({
+      label:d.label, data:d.data, backgroundColor: c.palette[i % c.palette.length],
+      borderRadius: currentTheme==='mono'?0:4
+    })) },
+    options: baseOptions({
+      layout:{ padding:{top:26} },
+      plugins:{ legend:{ display:true, position:'top', labels:{color:c.soft, boxWidth:9, boxHeight:9, font:{family:"'IBM Plex Mono', monospace", size:10.5}} },
+        tooltip: baseOptions().plugins.tooltip,
+        datalabels:{
+          display:true,
+          color: c.ink,
+          anchor:'end', align:'top', offset:4,
+          font:{ family:"'IBM Plex Mono', monospace", size:11, weight:'600' },
+          formatter: v => v.toFixed(1)
+        }
+      },
+      scales:{
+        x:{ grid:{display:false}, ticks:{color:c.ink} },
+        y:{ grid:{color:c.line}, ticks:{color:c.soft}, beginAtZero:true }
+      }
+    })
+  });
+}
+
+function renderEqualizer(){
+  const c = css();
+  const rows = [
+    ['Never smoker', DATA.dmg_smoking.Never],
+    ['Current smoker', DATA.dmg_smoking.Current],
+    ['Former smoker', DATA.dmg_smoking.Former],
+    ['High BP risk', DATA.dmg_bp.High],
+    ['Low BP risk', DATA.dmg_bp.Low],
+    ['High alcohol use', DATA.dmg_alcohol.High],
+    ['Family history: yes', DATA.dmg_family.Yes],
+    ['Female', DATA.dmg_gender.Female],
+    ['Male', DATA.dmg_gender.Male],
+  ];
+  const min=25, max=48;
+  const pct = v => ((v-min)/(max-min))*100;
+  const wrap = document.getElementById('equalizerRows');
+  wrap.innerHTML = rows.map(([name,val])=>`
+    <div class="eq-row">
+      <div class="eq-name">${name}</div>
+      <div class="eq-track">
+        <div class="eq-baseline" style="left:${pct(DATA.baseline)}%"></div>
+        <div class="eq-dot" style="left:${pct(val)}%"></div>
+      </div>
+      <div class="eq-val">${val.toFixed(1)}%</div>
+    </div>
+  `).join('');
+}
+
+function renderMatrix(){
+  const c = css();
+  const organs = Object.keys(DATA.matrix);
+  const statuses = ['Never','Former','Current'];
+  let vals = [];
+  organs.forEach(o=>statuses.forEach(s=>vals.push(DATA.matrix[o][s])));
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const alpha = v => 0.12 + 0.78 * ((v-min)/(max-min));
+
+  let html = `<div style="display:grid; grid-template-columns:120px repeat(${statuses.length},1fr); gap:6px; margin-top:6px;">`;
+  html += `<div></div>`;
+  statuses.forEach(s=> html += `<div class="eyebrow" style="text-align:center;">${s}</div>`);
+  organs.forEach(o=>{
+    html += `<div style="font-size:13px; color:var(--ink-soft); display:flex; align-items:center;">${o}</div>`;
+    statuses.forEach(s=>{
+      const v = DATA.matrix[o][s];
+      const a = alpha(v);
+      html += `<div style="border-radius:${currentTheme==='mono'?0:8}px; padding:14px 8px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:600;
+        background:${hexToRgba(c.accent,a)}; color:${a>0.5 ? c.surface : c.ink}; border:1px solid var(--line);">
+        ${v.toFixed(1)}%
+      </div>`;
+    });
+  });
+  html += `</div>`;
+  document.getElementById('matrixWrap').innerHTML = html;
+}
+function hexToRgba(hex, a){
+  const h = hex.replace('#','');
+  const bigint = parseInt(h.length===3 ? h.split('').map(x=>x+x).join('') : h, 16);
+  const r=(bigint>>16)&255, g=(bigint>>8)&255, b=bigint&255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function renderAllCharts(){
+  const c = css();
+
+  mkDoughnut('chSmoking', Object.keys(DATA.smoking_counts), Object.values(DATA.smoking_counts));
+  mkDoughnut('chOrgan', Object.keys(DATA.organ_counts), Object.values(DATA.organ_counts));
+  mkDoughnut('chGender', Object.keys(DATA.gender_counts), Object.values(DATA.gender_counts));
+
+  mkBar('chDmgSmoking', Object.keys(DATA.dmg_smoking), Object.values(DATA.dmg_smoking));
+  mkBar('chDmgBP', Object.keys(DATA.dmg_bp), Object.values(DATA.dmg_bp));
+  mkBar('chDmgAlcohol', Object.keys(DATA.dmg_alcohol), Object.values(DATA.dmg_alcohol));
+  mkBar('chDmgFamily', Object.keys(DATA.dmg_family), Object.values(DATA.dmg_family));
+  mkBar('chDmgAge', Object.keys(DATA.dmg_age), Object.values(DATA.dmg_age));
+  mkBar('chDmgBMI', Object.keys(DATA.dmg_bmi), Object.values(DATA.dmg_bmi));
+
+  mkBar('chOrganDmg', Object.keys(DATA.dmg_organ), Object.values(DATA.dmg_organ), {horizontal:true});
+
+  mkGroupedBar('chMarkers', ['Avg BMI','Avg Cholesterol ÷6','Avg Age'],
+    [
+      {label:'Healthy', data:[DATA.markers.Healthy.bmi, DATA.markers.Healthy.chol, DATA.markers.Healthy.age]},
+      {label:'Damaged', data:[DATA.markers.Damaged.bmi, DATA.markers.Damaged.chol, DATA.markers.Damaged.age]}
+    ]
+  );
+
+  renderEqualizer();
+  renderMatrix();
+}
+
+/* ============ NAV ============ */
+function positionIndicator(indicatorEl, activeBtn, containerEl){
+  if(!activeBtn) return;
+  const cRect = containerEl.getBoundingClientRect();
+  const bRect = activeBtn.getBoundingClientRect();
+  indicatorEl.style.width = bRect.width + 'px';
+  indicatorEl.style.transform = `translateX(${bRect.left - cRect.left - 4}px)`;
+}
+
+const tabsEl = document.getElementById('tabs');
+const tabIndicator = document.getElementById('tabIndicator');
+document.getElementById('tabs').addEventListener('click', e=>{
+  const btn = e.target.closest('.tab');
+  if(!btn) return;
+  goto(btn.dataset.page);
+});
+document.querySelectorAll('[data-goto]').forEach(a=>{
+  a.addEventListener('click', ()=> goto(a.dataset.goto));
+});
+function goto(page){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.page===page));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='page-'+page));
+  positionIndicator(tabIndicator, tabsEl.querySelector('.tab.active'), tabsEl);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ============ THEME SWITCH ============ */
+const themeSwitchEl = document.getElementById('themeSwitch');
+const themeIndicator = document.getElementById('themeIndicator');
+document.getElementById('themeSwitch').addEventListener('click', e=>{
+  const btn = e.target.closest('.theme-opt');
+  if(!btn) return;
+  currentTheme = btn.dataset.t;
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  document.querySelectorAll('.theme-opt').forEach(d=>d.classList.toggle('active', d===btn));
+  positionIndicator(themeIndicator, btn, themeSwitchEl);
+  renderAllCharts();
+});
+
+/* ============ INIT ============ */
+renderAllCharts();
+window.addEventListener('load', ()=>{
+  positionIndicator(tabIndicator, tabsEl.querySelector('.tab.active'), tabsEl);
+  positionIndicator(themeIndicator, themeSwitchEl.querySelector('.theme-opt.active'), themeSwitchEl);
+});
+window.addEventListener('resize', ()=>{
+  positionIndicator(tabIndicator, tabsEl.querySelector('.tab.active'), tabsEl);
+  positionIndicator(themeIndicator, themeSwitchEl.querySelector('.theme-opt.active'), themeSwitchEl);
+});
+</script>
+</body>
+</html>
